@@ -7,6 +7,9 @@ assistant popup appears right next to your cursor.
 Built with Swift + SwiftUI + AppKit. Your API key is stored only on this Mac,
 in the macOS Keychain, and is sent directly to OpenAI.
 
+**🌐 Website & download:** https://chinmay0703.github.io/ai_widget_app/
+&nbsp;·&nbsp; **⬇︎ Direct DMG:** [FloatingAI.dmg](https://github.com/chinmay0703/ai_widget_app/raw/main/FloatingAI.dmg)
+
 ---
 
 ## Features
