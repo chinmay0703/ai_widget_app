@@ -4,6 +4,8 @@ dist/
 /FloatingAI.app
 *.zip
 *.dmg
+# ...but keep the distributable DMG tracked in the repo
+!FloatingAI.dmg
 .env
 .env.*
 !.env.example

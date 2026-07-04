@@ -61,6 +61,34 @@ app a stable identity so macOS can remember its Accessibility permission.
 > Accessibility permission. After that the ✦ menu-bar icon appears on the right
 > edge of your screen.
 
+## Create the shareable DMG
+
+To produce a distributable disk image (what you send to other people):
+
+```bash
+./package.sh
+```
+
+This:
+
+- builds a **universal binary** (`arm64` + `x86_64`), so it runs on both Apple
+  Silicon and Intel Macs (the Intel slice is built via Rosetta — no full Xcode
+  needed),
+- assembles and **ad-hoc signs** `FloatingAI.app`,
+- writes **`FloatingAI.dmg`** to the repo root — a drag-to-Applications
+  installer that bundles the app + `HOW-TO-OPEN.txt`.
+
+A prebuilt **`FloatingAI.dmg`** is checked into this repo so you can grab it
+without building.
+
+**Installing the DMG (you or anyone you share it with):**
+
+1. Open `FloatingAI.dmg` → drag **FloatingAI.app** onto **Applications**.
+2. It isn't notarized by Apple, so the first launch is blocked — go to
+   **System Settings → Privacy & Security → Open Anyway**, or run:
+   `xattr -dr com.apple.quarantine /Applications/FloatingAI.app`
+3. Enter your OpenAI key → grant Accessibility once → press **⌘⇧K**.
+
 ---
 
 ## Permissions
@@ -104,22 +132,113 @@ which avoids an AppKit constraint-update crash on display/safe-area changes
 
 ---
 
+## Architecture
+
+Floating AI is a single native macOS app, but it is organized as a set of
+small, **single-responsibility service modules** rather than a monolith. Each
+service owns exactly one system concern and exposes a narrow, testable API, so
+any piece can be reasoned about, swapped, or mocked in isolation. Layers only
+depend downward (UI → Services → Models); nothing reaches back up.
+
+### Layered overview
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│  App / Orchestration                                               │
+│    Main → AppDelegate  (menu-bar item, ⌘⇧K hotkey, trigger flow)   │
+│    AppState            (observable app-wide state; injected into UI)│
+├──────────────────────────────────────────────────────────────────┤
+│  UI  (SwiftUI hosted in AppKit windows/panels)                     │
+│    PopupView · WelcomeView · SettingsView · HistoryView            │
+│    AccessibilityView · MarkdownView                                │
+│    ConversationViewModel  (per-popup session: streaming, actions)  │
+├──────────────────────────────────────────────────────────────────┤
+│  Services  (one module per external concern — the "microservices") │
+│    OpenAIService · ClipboardService · AccessibilityService         │
+│    KeychainService · HotKeyManager · HistoryStore                  │
+├──────────────────────────────────────────────────────────────────┤
+│  Models  (plain Codable value types, no behavior)                  │
+│    ChatMessage · PromptTemplate · AppSettings · HistoryItem · …    │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+### Service modules
+
+Each is independent and replaceable — the app wires them together but they have
+no knowledge of each other.
+
+| Service | Single responsibility | Backed by |
+|---|---|---|
+| `OpenAIService` | Build, send, and **stream** requests to the OpenAI Responses API (`/v1/responses`); validate the key | `URLSession` |
+| `ClipboardService` | Synthetic ⌘C / ⌘V, snapshot & restore the user's pasteboard | CoreGraphics `CGEvent` |
+| `AccessibilityService` | Check / prompt `AXIsProcessTrusted`, open the Settings pane | ApplicationServices |
+| `KeychainService` | Store / read / delete the API key locally | Security framework |
+| `HotKeyManager` | Register the ⌘⇧K system-wide hotkey | Carbon `RegisterEventHotKey` |
+| `HistoryStore` | Persist interaction history as JSON in Application Support | Filesystem |
+
+### Runtime flow
+
+`AppDelegate.trigger()` is the single orchestration point. On ⌘⇧K (or menu-bar →
+Open Assistant) it: captures the selection via `ClipboardService`, records the
+frontmost app, and presents a `PopupController`. That popup owns a
+`ConversationViewModel`, which calls `OpenAIService` and streams tokens into the
+SwiftUI `PopupView`. Copy / Replace / Insert route back through
+`ClipboardService` into the remembered app. See **How it works** above for the
+diagram.
+
+### Key design decisions
+
+- **Not sandboxed + Accessibility** — injecting ⌘C/⌘V into other apps is
+  forbidden inside the App Sandbox, so the app runs unsandboxed and gates on the
+  user's Accessibility grant.
+- **Fixed-size popup** — an earlier dynamically-sized popup caused a runaway
+  AppKit *update-constraints* loop that crashed the app; the popup is now a fixed
+  size with an internal scroll view. (A `--selftest N` mode stress-tests the
+  windows; it validated 1200+ open/close cycles with zero crashes.)
+- **`NSHostingController` hosting** — SwiftUI is hosted via controllers, not raw
+  `NSHostingView` content views, to avoid constraint-update crashes on
+  display / sleep-wake changes.
+- **Bring-your-own key in the Keychain** — the key never leaves the Mac except
+  in direct calls to OpenAI; nothing is proxied through a server.
+- **SwiftPM + ad-hoc bundling** — builds with only the Command Line Tools (no
+  full Xcode). Ad-hoc signing means each rebuild is a new identity, so macOS may
+  ask you to re-grant Accessibility after a rebuild.
+
 ## Project structure
 
 ```
-FloatingAI/
-├── Package.swift              SwiftPM executable target
-├── build.sh / run.sh          Assemble + ad-hoc sign the .app bundle
+ai_widget_app/
+├── Package.swift               SwiftPM executable target (macOS 13+)
+├── build.sh                    Build + assemble + ad-hoc sign build/FloatingAI.app
+├── run.sh                      build.sh, then relaunch the app
+├── package.sh                  Universal (arm64+x86_64) build → FloatingAI.dmg
+├── FloatingAI.dmg              Prebuilt, ready-to-share installer
 ├── Resources/
-│   ├── Info.plist             LSUIElement (accessory) app, bundle id, etc.
-│   └── FloatingAI.entitlements  Sandbox off, apple-events on
+│   ├── Info.plist              LSUIElement (accessory) app, bundle id, version
+│   └── FloatingAI.entitlements Sandbox off, apple-events on
 └── Sources/FloatingAI/
-    ├── App/                   Main entry, AppDelegate (menu bar + hotkey), AppState, window controllers
-    ├── Popup/                 Popup panel/controller, ConversationViewModel, PopupView
-    ├── Views/                 Welcome (onboarding), Settings, History, Markdown renderer
-    ├── Services/              OpenAI, Clipboard, Accessibility, Keychain, HotKey, History
-    ├── Models/                ChatMessage, PromptTemplate, HistoryItem, AppSettings, errors
-    └── Utils/                 Constants, Logger, Notifications
+    ├── App/
+    │   ├── Main.swift               @main entry (+ hidden --selftest mode)
+    │   ├── AppDelegate.swift        Menu-bar item, hotkey, trigger orchestration
+    │   ├── AppState.swift           Observable app-wide state
+    │   ├── WindowControllers.swift  Onboarding / Settings / Accessibility windows
+    │   └── SelfTest.swift           Window stress-test harness (--selftest)
+    ├── Popup/
+    │   ├── PopupController.swift     Presents the popup near the cursor
+    │   ├── PopupPanel.swift          NSPanel (key-capable, Esc to close)
+    │   ├── PopupView.swift           The assistant UI (SwiftUI)
+    │   └── ConversationViewModel.swift  Streaming, chat, Copy/Replace/Insert
+    ├── Views/
+    │   ├── WelcomeView.swift         First-run onboarding
+    │   ├── SettingsView.swift        General / History / About tabs
+    │   ├── HistoryView.swift         Past interactions
+    │   ├── AccessibilityView.swift   "Enable Accessibility → Restart" flow
+    │   └── MarkdownView.swift        Lightweight Markdown renderer
+    ├── Services/                     OpenAI, Clipboard, Accessibility,
+    │                                 Keychain, HotKey, History
+    ├── Models/                       ChatMessage, PromptTemplate, HistoryItem,
+    │                                 AppSettings, OpenAIModels, AppError
+    └── Utils/                        Constants, Logger, Notifications
 ```
 
 ---
