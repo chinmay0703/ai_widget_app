@@ -40,6 +40,7 @@ struct PopupView: View {
                         }
                         if !hasConversation {
                             quickActions
+                            emptyStateHint
                         } else {
                             conversation
                         }
@@ -151,6 +152,30 @@ struct PopupView: View {
                 .background(Color.secondary.opacity(0.10))
                 .clipShape(RoundedRectangle(cornerRadius: 8))
         }
+    }
+
+    // MARK: - Empty state
+
+    private var emptyStateHint: some View {
+        VStack(spacing: 10) {
+            Image(systemName: "sparkles")
+                .font(.system(size: 30))
+                .foregroundStyle(
+                    LinearGradient(colors: [Color(red: 0.48, green: 0.35, blue: 0.97),
+                                            Color(red: 0.58, green: 0.31, blue: 0.92)],
+                                   startPoint: .topLeading, endPoint: .bottomTrailing)
+                )
+            Text(viewModel.hasSelection
+                 ? "Choose a quick action above, or ask a question below."
+                 : "Select text anywhere, then press ⌘⇧K — or just ask a question below.")
+                .font(.callout)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.top, 30)
+        .padding(.horizontal, 18)
     }
 
     // MARK: - Quick actions
