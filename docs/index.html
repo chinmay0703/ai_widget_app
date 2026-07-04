@@ -51,8 +51,9 @@ a:focus-visible,button:focus-visible{outline:2px solid var(--gold);outline-offse
 .btn .sub{font-weight:600;opacity:.8;font-size:.8rem}
 
 /* ── Hero ──────────────────────────────────────────────────────── */
-.hero{background:linear-gradient(180deg,var(--cream) 0%,var(--white) 100%);border-bottom:1px solid var(--rule)}
-.hero .wrap{padding:72px 24px 64px;display:grid;grid-template-columns:1.05fr .95fr;gap:48px;align-items:center}
+.hero{position:relative;overflow:hidden;background:linear-gradient(180deg,var(--cream) 0%,var(--white) 100%);border-bottom:1px solid var(--rule)}
+.hero::before{content:"";position:absolute;top:-160px;right:-120px;width:520px;height:520px;border-radius:50%;background:radial-gradient(circle,rgba(122,90,248,.18),rgba(148,80,234,.06) 55%,transparent 70%);pointer-events:none}
+.hero .wrap{position:relative;padding:72px 24px 64px;display:grid;grid-template-columns:1.05fr .95fr;gap:48px;align-items:center}
 .hero h1{font-size:2.9rem;letter-spacing:-.01em}
 .hero .lede{font-size:1.2rem;color:var(--ink);margin:18px 0 26px;max-width:36ch}
 .hero .cta{display:flex;flex-wrap:wrap;gap:14px;align-items:center}
@@ -73,6 +74,8 @@ a:focus-visible,button:focus-visible{outline:2px solid var(--gold);outline-offse
 .mock .chip{font-size:.8rem;font-weight:600;padding:6px 12px;border:1px solid var(--rule);border-radius:999px;color:var(--navy);background:#fff}
 .mock .chip.on{background:var(--navy);color:#fff;border-color:var(--navy)}
 .mock .ans{border-left:3px solid var(--gold);background:var(--cream);padding:10px 14px;border-radius:0 8px 8px 0;font-size:.9rem;color:var(--ink)}
+.mockacts{display:flex;gap:8px;margin-top:14px}
+.mact{font-size:.78rem;font-weight:700;padding:7px 12px;border:1px solid var(--rule);border-radius:7px;color:var(--navy);background:#fff}
 .kbd{font-family:var(--mono);font-size:.85em;background:#fff;border:1px solid var(--rule);border-bottom-width:2px;border-radius:6px;padding:1px 7px;color:var(--navy);font-weight:700}
 
 /* ── Sections ──────────────────────────────────────────────────── */
@@ -178,6 +181,9 @@ footer a{color:var(--navy);font-weight:600}
           <span class="chip">Translate</span>
         </div>
         <div class="ans">I'm not feeling this way; please be ready to identify.</div>
+        <div class="mockacts">
+          <span class="mact">⧉ Copy</span><span class="mact">⇄ Replace</span><span class="mact">⤵ Insert</span>
+        </div>
       </div>
     </div>
   </div>
@@ -286,6 +292,24 @@ footer a{color:var(--navy);font-weight:600}
         </div>
         <p style="color:var(--muted);font-size:.9rem;margin-top:16px">Works with any model you have access to — GPT-4o, GPT-4o mini, GPT-4.1, o4-mini, or a custom model id.</p>
       </div>
+    </div>
+  </div>
+</section>
+
+<!-- Requirements & FAQ -->
+<section class="steps" style="background:var(--white)">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="kicker">Good to know</span>
+      <h2>Requirements &amp; FAQ</h2>
+    </div>
+    <div class="grid grid--3">
+      <div class="card"><div class="ic">💻</div><h3>Requirements</h3><p>macOS 13 (Ventura) or later, on Apple Silicon or Intel. An OpenAI API key. ~0.8&nbsp;MB download.</p></div>
+      <div class="card"><div class="ic">🔒</div><h3>Is my key safe?</h3><p>Yes — it's stored in the macOS Keychain on your Mac and sent only in direct requests to OpenAI. Nothing is proxied through a server.</p></div>
+      <div class="card"><div class="ic">🛡️</div><h3>"Can't verify" warning?</h3><p>Normal for apps outside the App Store. Use <b>Open Anyway</b> in Privacy &amp; Security, or the <span class="inline-code">xattr</span> command in step&nbsp;2. One time only.</p></div>
+      <div class="card"><div class="ic">⌨️</div><h3>Shortcut not firing?</h3><p>Another app may own ⌘⇧K, or it's off in Settings. Toggle it in the app's Settings → General, or open from the menu-bar ✦.</p></div>
+      <div class="card"><div class="ic">🧩</div><h3>No menu-bar icon?</h3><p>The app may not be running — relaunch it. There's no Dock icon by design; the ✦ icon is the app.</p></div>
+      <div class="card"><div class="ic">💸</div><h3>What does it cost?</h3><p>The app is free. You pay OpenAI only for the tokens your requests use, billed to your own account.</p></div>
     </div>
   </div>
 </section>
