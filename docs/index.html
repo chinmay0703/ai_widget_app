@@ -1,0 +1,322 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Floating AI — a menu-bar AI assistant for macOS</title>
+<meta name="description" content="Select text anywhere on your Mac, press Command-Shift-K, and explain, rewrite, summarize or translate it with your own OpenAI key. Download the DMG.">
+<style>
+/* ── P-DART tokens ─────────────────────────────────────────────── */
+:root{
+  --navy:#1A3E6F; --navy-dark:#0F2A4F; --gold:#D49E2E; --gold-light:#F4D484;
+  --cream:#FAF6EE; --white:#FFFFFF; --ink:#1E293B; --muted:#64748B;
+  --success:#2E7D32; --success-light:#E7F3E7; --warn-light:#FEF3C7; --warn-text:#92400E;
+  --rule:#CBD5E1; --panel:#F5F1E8;
+  --sans:'Calibri','Segoe UI','Helvetica Neue',Arial,sans-serif;
+  --serif:'Cambria','Georgia','Times New Roman',serif;
+  --mono:'Consolas','SF Mono','Monaco','Courier New',monospace;
+  --shadow-sm:0 1px 2px 0 rgb(0 0 0/.05);
+  --shadow-md:0 2px 6px 0 rgb(0 0 0/.07),0 1px 2px 0 rgb(0 0 0/.04);
+  --radius:.5rem; --radius-sm:.25rem;
+}
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;scroll-behavior:smooth}
+body{margin:0;font-family:var(--sans);font-size:16px;line-height:1.55;color:var(--ink);background:var(--white);-webkit-font-smoothing:antialiased}
+h1,h2,h3{font-family:var(--serif);color:var(--navy);font-weight:700;line-height:1.2;margin:0}
+p{margin:0}
+a{color:var(--navy);text-underline-offset:.15em}
+a:focus-visible,button:focus-visible{outline:2px solid var(--gold);outline-offset:2px;border-radius:2px}
+.wrap{max-width:1080px;margin:0 auto;padding:0 24px}
+.kicker{display:block;font-size:.6875rem;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:.09em;margin-bottom:12px}
+
+/* ── Nav ───────────────────────────────────────────────────────── */
+.nav{position:sticky;top:0;z-index:20;background:var(--navy);color:var(--white)}
+.nav .wrap{display:flex;align-items:center;gap:16px;height:60px}
+.brand{display:flex;align-items:center;gap:10px;font-weight:700;color:#fff;text-decoration:none;font-size:1.05rem}
+.brand .mark{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;font-family:var(--serif);font-weight:700;font-size:.9rem;color:#fff;background:linear-gradient(135deg,#5b6bfa,#9450ea)}
+.nav a.navlink{color:#cdd8ea;text-decoration:none;font-size:.9rem;font-weight:600}
+.nav a.navlink:hover{color:#fff}
+.nav .spacer{flex:1}
+.nav-links{display:flex;gap:22px;align-items:center}
+
+/* ── Buttons ───────────────────────────────────────────────────── */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;padding:12px 22px;font-family:var(--sans);font-size:.95rem;font-weight:700;color:#fff;background:var(--navy);border:1.5px solid var(--navy);border-radius:var(--radius-sm);cursor:pointer;text-decoration:none;transition:background .15s ease,transform .1s ease}
+.btn:hover{background:var(--navy-dark);border-color:var(--navy-dark);color:#fff}
+.btn:active{transform:translateY(1px)}
+.btn--gold{background:var(--gold);border-color:var(--gold);color:#3a2c07}
+.btn--gold:hover{background:var(--gold-light);border-color:var(--gold-light);color:#3a2c07}
+.btn--ghost{background:transparent;color:var(--navy)}
+.btn--ghost:hover{background:var(--cream);color:var(--navy)}
+.btn--lg{padding:15px 30px;font-size:1.05rem}
+.btn .sub{font-weight:600;opacity:.8;font-size:.8rem}
+
+/* ── Hero ──────────────────────────────────────────────────────── */
+.hero{background:linear-gradient(180deg,var(--cream) 0%,var(--white) 100%);border-bottom:1px solid var(--rule)}
+.hero .wrap{padding:72px 24px 64px;display:grid;grid-template-columns:1.05fr .95fr;gap:48px;align-items:center}
+.hero h1{font-size:2.9rem;letter-spacing:-.01em}
+.hero .lede{font-size:1.2rem;color:var(--ink);margin:18px 0 26px;max-width:36ch}
+.hero .cta{display:flex;flex-wrap:wrap;gap:14px;align-items:center}
+.hero .meta{margin-top:20px;display:flex;gap:10px;flex-wrap:wrap}
+.badge{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;font-size:.78rem;font-weight:700;border-radius:999px;background:var(--cream);color:var(--navy);border:1px solid var(--rule)}
+.badge--ok{background:var(--success-light);color:var(--success);border-color:#bfe0c0}
+
+/* App mock ─────────────────────────────────────────────────────── */
+.mock{background:var(--white);border:1px solid var(--rule);border-radius:14px;box-shadow:var(--shadow-md);overflow:hidden}
+.mock .bar{display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--panel);border-bottom:1px solid var(--rule)}
+.mock .bar i{width:11px;height:11px;border-radius:50%;display:inline-block}
+.mock .bar .r{background:#ff5f57}.mock .bar .y{background:#febc2e}.mock .bar .g{background:#28c840}
+.mock .bar .t{margin-left:8px;font-size:.8rem;color:var(--muted);font-weight:600;display:flex;align-items:center;gap:6px}
+.mock .body{padding:16px}
+.mock .lbl{font-size:.7rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:700;margin-bottom:6px}
+.mock .sel{background:var(--panel);border-radius:8px;padding:10px 12px;font-size:.9rem;color:var(--ink)}
+.mock .chips{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0}
+.mock .chip{font-size:.8rem;font-weight:600;padding:6px 12px;border:1px solid var(--rule);border-radius:999px;color:var(--navy);background:#fff}
+.mock .chip.on{background:var(--navy);color:#fff;border-color:var(--navy)}
+.mock .ans{border-left:3px solid var(--gold);background:var(--cream);padding:10px 14px;border-radius:0 8px 8px 0;font-size:.9rem;color:var(--ink)}
+.kbd{font-family:var(--mono);font-size:.85em;background:#fff;border:1px solid var(--rule);border-bottom-width:2px;border-radius:6px;padding:1px 7px;color:var(--navy);font-weight:700}
+
+/* ── Sections ──────────────────────────────────────────────────── */
+section{padding:64px 0}
+.section-head{max-width:640px;margin-bottom:36px}
+.section-head h2{font-size:2rem}
+.section-head p{color:var(--muted);font-size:1.05rem;margin-top:10px}
+
+/* Feature grid */
+.grid{display:grid;gap:18px}
+.grid--3{grid-template-columns:repeat(3,1fr)}
+.card{background:#fff;border:1px solid var(--rule);border-radius:var(--radius);padding:22px;box-shadow:var(--shadow-sm)}
+.card .ic{width:38px;height:38px;border-radius:9px;background:var(--cream);border:1px solid var(--rule);display:grid;place-items:center;font-size:1.1rem;margin-bottom:12px}
+.card h3{font-size:1.15rem;margin-bottom:6px}
+.card p{color:var(--muted);font-size:.92rem}
+
+/* Steps */
+.steps{background:var(--cream);border-top:1px solid var(--rule);border-bottom:1px solid var(--rule)}
+.step{display:grid;grid-template-columns:44px 1fr;gap:18px;padding:20px 0;border-bottom:1px solid var(--rule)}
+.step:last-child{border-bottom:none}
+.step .n{width:44px;height:44px;border-radius:50%;background:var(--navy);color:#fff;font-family:var(--serif);font-weight:700;font-size:1.15rem;display:grid;place-items:center}
+.step h3{font-size:1.2rem;margin-bottom:4px}
+.step p{color:var(--ink)}
+.step .n.gold{background:var(--gold);color:#3a2c07}
+pre{font-family:var(--mono);font-size:.85rem;background:var(--navy-dark);color:#e8eefb;padding:12px 14px;border-radius:8px;overflow-x:auto;margin:10px 0 0}
+code{font-family:var(--mono)}
+.inline-code{font-family:var(--mono);font-size:.9em;background:var(--panel);padding:.12em .45em;border-radius:4px}
+
+/* Panels */
+.panel{padding:16px 20px;border-radius:var(--radius);margin:12px 0;font-size:.95rem}
+.panel--warn{background:var(--warn-light);border:1px solid var(--gold);color:var(--warn-text)}
+.panel--info{background:var(--panel);border:1px solid var(--rule)}
+.panel b{color:inherit}
+
+/* usage two-col */
+.usecols{display:grid;grid-template-columns:1fr 1fr;gap:40px;align-items:start}
+
+/* Download strip */
+.dl{background:var(--navy);color:#fff;text-align:center}
+.dl h2{color:#fff;font-size:2rem}
+.dl p{color:#cdd8ea;margin:12px auto 26px;max-width:52ch}
+
+footer{border-top:1px solid var(--rule);padding:28px 0;font-size:.85rem;color:var(--muted)}
+footer .wrap{display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px}
+footer a{color:var(--navy);font-weight:600}
+
+@media(max-width:860px){
+  .hero .wrap{grid-template-columns:1fr;gap:34px;padding:48px 24px}
+  .hero h1{font-size:2.3rem}
+  .grid--3{grid-template-columns:1fr}
+  .usecols{grid-template-columns:1fr;gap:24px}
+  .nav-links{display:none}
+}
+</style>
+</head>
+<body>
+
+<!-- Nav -->
+<header class="nav">
+  <div class="wrap">
+    <a class="brand" href="#top"><span class="mark">AI</span> Floating&nbsp;AI</a>
+    <div class="spacer"></div>
+    <nav class="nav-links">
+      <a class="navlink" href="#features">Features</a>
+      <a class="navlink" href="#install">Install</a>
+      <a class="navlink" href="#usage">Usage</a>
+      <a class="navlink" href="https://github.com/chinmay0703/ai_widget_app">GitHub</a>
+    </nav>
+    <a class="btn btn--gold" href="https://github.com/chinmay0703/ai_widget_app/raw/main/FloatingAI.dmg" download="FloatingAI.dmg" data-dl>Download</a>
+  </div>
+</header>
+
+<!-- Hero -->
+<div id="top" class="hero">
+  <div class="wrap">
+    <div>
+      <span class="kicker">macOS · menu-bar assistant</span>
+      <h1>AI for whatever you just selected.</h1>
+      <p class="lede">Highlight text in any app, press <span class="kbd">⌘⇧K</span>, and explain, rewrite, summarize, fix, or translate it — with <b>your own OpenAI key</b>, right where you're working.</p>
+      <div class="cta">
+        <a class="btn btn--lg btn--gold" href="https://github.com/chinmay0703/ai_widget_app/raw/main/FloatingAI.dmg" download="FloatingAI.dmg" data-dl>
+          ↓ Download for macOS <span class="sub">.dmg · ~0.8&nbsp;MB</span>
+        </a>
+        <a class="btn btn--lg btn--ghost" href="#install">How it works</a>
+      </div>
+      <div class="meta">
+        <span class="badge badge--ok">✓ Universal · Apple Silicon + Intel</span>
+        <span class="badge">macOS 13+</span>
+        <span class="badge">Your key stays on your Mac</span>
+      </div>
+    </div>
+
+    <!-- App preview mock -->
+    <div class="mock" aria-hidden="true">
+      <div class="bar"><i class="r"></i><i class="y"></i><i class="g"></i><span class="t">✦ Fix Grammar &nbsp;·&nbsp; GPT-4o mini</span></div>
+      <div class="body">
+        <div class="lbl">Selected text</div>
+        <div class="sel">i am not fielding this way please redy to isdentity</div>
+        <div class="chips">
+          <span class="chip on">Fix Grammar</span>
+          <span class="chip">Explain</span>
+          <span class="chip">Rewrite</span>
+          <span class="chip">Translate</span>
+        </div>
+        <div class="ans">I'm not feeling this way; please be ready to identify.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Features -->
+<section id="features">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="kicker">What it does</span>
+      <h2>Fast, private, out of your way</h2>
+      <p>A stable menu-bar app — no floating widget, no Dock icon. The assistant appears next to your cursor and disappears when you click away.</p>
+    </div>
+    <div class="grid grid--3">
+      <div class="card"><div class="ic">⌨️</div><h3>One shortcut</h3><p>Select text anywhere and press ⌘⇧K. The popup opens right by your cursor; click outside to dismiss.</p></div>
+      <div class="card"><div class="ic">⚡</div><h3>Quick actions</h3><p>Explain, Summarize, Rewrite, Fix Grammar, Translate, Improve Tone — or type your own prompt.</p></div>
+      <div class="card"><div class="ic">🌊</div><h3>Streaming answers</h3><p>Responses stream in live via the OpenAI Responses API, rendered as clean Markdown.</p></div>
+      <div class="card"><div class="ic">📋</div><h3>Copy · Replace · Insert</h3><p>Put the answer on the clipboard, or paste it straight back into the app you were working in.</p></div>
+      <div class="card"><div class="ic">🔐</div><h3>Bring your own key</h3><p>Your OpenAI key is stored in the macOS Keychain and sent only to OpenAI — never proxied.</p></div>
+      <div class="card"><div class="ic">💬</div><h3>Keep chatting</h3><p>Ask follow-ups in the same popup, pick any model, and review past interactions in History.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- Install -->
+<section id="install" class="steps">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="kicker">Setup · about 2 minutes, once</span>
+      <h2>Install &amp; get started</h2>
+      <p>It isn't distributed through the App Store, so the very first launch needs one manual "open anyway" step. After that it just works.</p>
+    </div>
+
+    <div class="step">
+      <div class="n">1</div>
+      <div>
+        <h3>Download &amp; move to Applications</h3>
+        <p>Grab the DMG, open it, and drag <b>FloatingAI.app</b> onto the <b>Applications</b> shortcut.</p>
+        <p style="margin-top:10px"><a class="btn btn--gold" href="https://github.com/chinmay0703/ai_widget_app/raw/main/FloatingAI.dmg" download="FloatingAI.dmg" data-dl>↓ Download FloatingAI.dmg</a></p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="n">2</div>
+      <div>
+        <h3>Allow it past Gatekeeper (first launch only)</h3>
+        <p>Double-click the app. If macOS says it can't verify the developer, open <b>System Settings → Privacy &amp; Security</b>, scroll down, and click <b>Open Anyway</b>. Or run this in Terminal:</p>
+        <pre><code>xattr -dr com.apple.quarantine /Applications/FloatingAI.app</code></pre>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="n">3</div>
+      <div>
+        <h3>Add your OpenAI key</h3>
+        <p>On first run, paste your key (create one at <a href="https://platform.openai.com/api-keys">platform.openai.com/api-keys</a>). It's saved in your Keychain — only on your Mac.</p>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="n">4</div>
+      <div>
+        <h3>Grant Accessibility &amp; restart</h3>
+        <p>The app needs Accessibility permission to read your selection and paste answers back. Turn on <b>FloatingAI</b> in <span class="inline-code">Privacy &amp; Security → Accessibility</span>, then click <b>Restart Floating AI</b>.</p>
+        <div class="panel panel--warn"><b>Tip:</b> a running Mac app can't see a new Accessibility grant until it restarts — that's what the "Restart Floating AI" button is for.</div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="n gold">✓</div>
+      <div>
+        <h3>You're set</h3>
+        <p>Look for the <b>✦</b> icon in your menu bar. Select any text and press <span class="kbd">⌘⇧K</span>.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Usage -->
+<section id="usage">
+  <div class="wrap">
+    <div class="section-head">
+      <span class="kicker">Everyday use</span>
+      <h2>How to use it</h2>
+    </div>
+    <div class="usecols">
+      <div>
+        <ol style="padding-left:20px;line-height:1.9">
+          <li><b>Select text</b> in any app — a doc, browser, email, code.</li>
+          <li>Press <span class="kbd">⌘⇧K</span> (or click the menu-bar <b>✦</b> → Open Assistant).</li>
+          <li>Pick a <b>quick action</b> or type a prompt, then send.</li>
+          <li>Use <b>Copy</b>, <b>Replace</b>, or <b>Insert</b> to put the answer back.</li>
+          <li>Ask <b>follow-ups</b> in the same popup, or press <span class="kbd">Esc</span> to close.</li>
+        </ol>
+        <div class="panel panel--info">The <b>✦ menu-bar icon</b> holds Settings (model, system prompt, temperature, shortcut), History, and Quit. There's no Dock icon by design.</div>
+      </div>
+      <div class="card">
+        <div class="lbl" style="font-size:.7rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:700;margin-bottom:10px">Built-in quick actions</div>
+        <div class="mock" style="box-shadow:none;border:none">
+          <div class="chips" style="margin:0">
+            <span class="chip">Explain</span><span class="chip">Summarize</span>
+            <span class="chip">Rewrite</span><span class="chip">Fix Grammar</span>
+            <span class="chip">Translate</span><span class="chip">Improve Tone</span>
+            <span class="chip on">+ Custom prompt</span>
+          </div>
+        </div>
+        <p style="color:var(--muted);font-size:.9rem;margin-top:16px">Works with any model you have access to — GPT-4o, GPT-4o mini, GPT-4.1, o4-mini, or a custom model id.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Download strip -->
+<section class="dl">
+  <div class="wrap">
+    <span class="kicker" style="color:var(--gold-light)">Ready when you are</span>
+    <h2>Download Floating AI</h2>
+    <p>Universal build for Apple Silicon and Intel Macs (macOS 13 or later). Free — you just bring your own OpenAI key.</p>
+    <a class="btn btn--lg btn--gold" href="https://github.com/chinmay0703/ai_widget_app/raw/main/FloatingAI.dmg" download="FloatingAI.dmg" data-dl>↓ Download the .dmg</a>
+    <p style="margin-top:18px;font-size:.85rem"><a href="https://github.com/chinmay0703/ai_widget_app" style="color:#cdd8ea">Prefer to build from source? View the repo →</a></p>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div>Floating AI — a native macOS menu-bar assistant. Your key stays on your Mac.</div>
+    <div><a href="https://github.com/chinmay0703/ai_widget_app">github.com/chinmay0703/ai_widget_app</a></div>
+  </div>
+</footer>
+
+<script>
+// Light feedback on download click; the link itself downloads the .dmg.
+document.querySelectorAll('[data-dl]').forEach(function(a){
+  a.addEventListener('click', function(){
+    var original = a.innerHTML;
+    a.innerHTML = 'Starting download…';
+    setTimeout(function(){ a.innerHTML = original; }, 2500);
+  });
+});
+</script>
+</body>
+</html>
