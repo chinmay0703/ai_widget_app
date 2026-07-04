@@ -1,0 +1,13 @@
+.build/
+build/
+dist/
+/FloatingAI.app
+*.zip
+*.dmg
+.env
+.env.*
+!.env.example
+*.xcodeproj
+.DS_Store
+*.swiftpm
+.swiftpm/

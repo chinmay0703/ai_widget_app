@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!--
+      The app is intentionally NOT sandboxed. Injecting Cmd+C / Cmd+V into the
+      frontmost application and reading its selection via the Accessibility APIs
+      is not permitted inside the App Sandbox for third-party apps, so we run
+      unsandboxed and rely on the user granting Accessibility permission.
+    -->
+    <key>com.apple.security.app-sandbox</key>
+    <false/>
+    <key>com.apple.security.automation.apple-events</key>
+    <true/>
+</dict>
+</plist>
